@@ -20,7 +20,7 @@ const items = [
 
 export function Purpose() {
   return (
-    <section id="purpose" className="py-20 md:py-28 bg-background">
+    <section id="purpose" className="pt-20 md:pt-28 pb-10 md:pb-14 bg-background">
       <div className="max-w-7xl mx-auto px-5 sm:px-8">
         <div className="max-w-2xl">
           <h2 className="text-4xl md:text-5xl font-bold text-navy">Why Prep2Seat?</h2>

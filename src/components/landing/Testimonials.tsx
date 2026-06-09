@@ -46,7 +46,7 @@ export function Testimonials() {
                   <Star key={i} size={16} className="text-gold" fill="currentColor" />
                 ))}
               </div>
-              <blockquote className="text-foreground/85 leading-relaxed">
+              <blockquote className="text-base italic text-foreground/85 leading-relaxed">
                 "{t.quote}"
               </blockquote>
               <figcaption className="mt-6 pt-6 border-t border-border">
