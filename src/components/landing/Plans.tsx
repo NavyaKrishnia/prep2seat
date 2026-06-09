@@ -56,7 +56,7 @@ export function Plans() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-navy">Choose Your Plan</h2>
           <p className="mt-4 text-lg text-foreground/70">
-            Transparent pricing. No hidden fees. Cancel anytime.
+            Transparent, one-time pricing. No subscriptions. No hidden fees.
           </p>
         </div>
 
