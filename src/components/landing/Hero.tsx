@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function Hero() {
   return (
@@ -37,13 +38,13 @@ export function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <a
-              href="#plans"
+            <Link
+              to="/free-form"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-7 py-4 text-base font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
             >
               Get Your Free List
               <ArrowRight size={18} />
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="inline-flex items-center justify-center rounded-full border-2 border-navy px-7 py-4 text-base font-bold text-navy hover:bg-navy hover:text-navy-foreground transition"

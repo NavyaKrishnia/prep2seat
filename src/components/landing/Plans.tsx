@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 type Plan = {
   name: string;
@@ -112,15 +113,22 @@ export function Plans() {
                   ))}
                 </ul>
 
-                <button
-                  className={`mt-8 w-full rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] ${
-                    p.variant === "free"
-                      ? "border-2 border-gold text-navy hover:bg-gold hover:text-gold-foreground"
-                      : "bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
-                  }`}
-                >
-                  {p.cta}
-                </button>
+                {p.variant === "free" ? (
+                  <Link
+                    to="/free-form"
+                    className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] border-2 border-gold text-navy hover:bg-gold hover:text-gold-foreground"
+                  >
+                    {p.cta}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/purchase/$plan"
+                    params={{ plan: p.variant }}
+                    className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
+                  >
+                    {p.cta}
+                  </Link>
+                )}
               </div>
             );
           })}
