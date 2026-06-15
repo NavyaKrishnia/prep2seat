@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 
 const links = [
@@ -46,12 +47,12 @@ export function Navbar() {
           ))}
         </ul>
 
-        <a
-          href="#plans"
+        <Link
+          to="/free-form"
           className="hidden md:inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
         >
-          Get Started
-        </a>
+          Get Started Free
+        </Link>
 
         <button
           aria-label="Toggle menu"
@@ -77,13 +78,13 @@ export function Navbar() {
               </li>
             ))}
             <li className="pt-2">
-              <a
-                href="#plans"
+              <Link
+                to="/free-form"
                 onClick={() => setOpen(false)}
                 className="block text-center rounded-full bg-gold px-5 py-3 font-bold text-gold-foreground"
               >
-                Get Started
-              </a>
+                Get Started Free
+              </Link>
             </li>
           </ul>
         </div>
