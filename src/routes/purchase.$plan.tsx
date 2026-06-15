@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { PLAN_DETAILS, type PlanKey } from "@/lib/constants";
 import { sendMockOtp, verifyMockOtp, signUpOrSignInWithPhone } from "@/lib/auth-helpers";
@@ -15,8 +15,7 @@ type Step = "phone" | "otp" | "payment";
 function PurchasePage() {
   const { plan } = Route.useParams();
   const navigate = useNavigate();
-  if (plan !== "basic" && plan !== "pro") throw notFound();
-  const planKey = plan as PlanKey;
+  const planKey = (plan === "pro" ? "pro" : "basic") as PlanKey;
   const details = PLAN_DETAILS[planKey];
 
   const [step, setStep] = useState<Step>("phone");
