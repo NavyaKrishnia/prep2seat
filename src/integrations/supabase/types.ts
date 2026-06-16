@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      leads: {
+        Row: {
+          air_rank: number | null
+          category: string | null
+          created_at: string
+          id: string
+          source: string
+          state: string | null
+          whatsapp_number: string
+        }
+        Insert: {
+          air_rank?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          source?: string
+          state?: string | null
+          whatsapp_number: string
+        }
+        Update: {
+          air_rank?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          source?: string
+          state?: string | null
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
       student_profiles: {
         Row: {
           air_rank: number | null
