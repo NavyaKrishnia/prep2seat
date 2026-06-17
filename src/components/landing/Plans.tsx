@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useModals } from "@/lib/modals";
 
 type Plan = {
   name: string;
@@ -51,6 +52,7 @@ const plans: Plan[] = [
 ];
 
 export function Plans() {
+  const modals = useModals();
   return (
     <section id="plans" className="py-20 md:py-28 bg-background">
       <div className="max-w-7xl mx-auto px-5 sm:px-8">
@@ -121,13 +123,13 @@ export function Plans() {
                     {p.cta}
                   </Link>
                 ) : (
-                  <Link
-                    to="/purchase/$plan"
-                    params={{ plan: p.variant }}
+                  <button
+                    type="button"
+                    onClick={() => modals.openPurchase(p.variant as "basic" | "pro")}
                     className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
                   >
                     {p.cta}
-                  </Link>
+                  </button>
                 )}
               </div>
             );
