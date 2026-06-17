@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useModals } from "@/lib/modals";
 
 type Plan = {
   name: string;
