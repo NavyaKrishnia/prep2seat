@@ -125,7 +125,7 @@ export function Plans() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => modals.openPurchase(p.variant)}
+                    onClick={() => modals.openPurchase(p.variant as "basic" | "pro")}
                     className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
                   >
                     {p.cta}
