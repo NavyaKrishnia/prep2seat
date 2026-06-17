@@ -62,6 +62,7 @@ function AuthModal() {
 
   return (
     <Modal>
+      <p className="text-xs font-medium text-foreground/50 mb-1">Step 1 of 2</p>
       <h1 className="text-2xl font-bold text-navy">Sign in to Prep2Seat</h1>
       <p className="mt-1 text-sm text-foreground/70">
         Verify your WhatsApp number to continue
