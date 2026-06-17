@@ -52,6 +52,7 @@ const plans: Plan[] = [
 ];
 
 export function Plans() {
+  const modals = useModals();
   return (
     <section id="plans" className="py-20 md:py-28 bg-background">
       <div className="max-w-7xl mx-auto px-5 sm:px-8">
