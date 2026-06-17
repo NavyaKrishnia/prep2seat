@@ -123,13 +123,13 @@ export function Plans() {
                     {p.cta}
                   </Link>
                 ) : (
-                  <Link
-                    to="/purchase/$plan"
-                    params={{ plan: p.variant }}
+                  <button
+                    type="button"
+                    onClick={() => modals.openPurchase(p.variant)}
                     className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
                   >
                     {p.cta}
-                  </Link>
+                  </button>
                 )}
               </div>
             );
