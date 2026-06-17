@@ -22,9 +22,8 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
 
 function FreeResults() {
   const navigate = useNavigate();
+  const modals = useModals();
   const [input, setInput] = useState<FreeInput | null>(null);
-  const [waOpen, setWaOpen] = useState(false);
-  const [dlOpen, setDlOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
