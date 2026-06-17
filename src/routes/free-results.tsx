@@ -2,8 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Lock, Pencil, Download } from "lucide-react";
 import { DUMMY_COLLEGES } from "@/lib/constants";
-import { SendWhatsAppModal } from "@/components/SendWhatsAppModal";
-import { DownloadSampleModal } from "@/components/DownloadSampleModal";
+import { useModals } from "@/lib/modals";
 
 export const Route = createFileRoute("/free-results")({
   ssr: false,
