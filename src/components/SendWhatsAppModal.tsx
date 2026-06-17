@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthSession } from "@/lib/session";
 import { toast } from "sonner";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -22,11 +23,8 @@ export function SendWhatsAppModal({
   state: string;
   category: string;
 }) {
-  const initial =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("p2s_pending_otp") ?? ""
-      : "";
-  const [phone, setPhone] = useState(initial);
+  const session = useAuthSession();
+  const [phone, setPhone] = useState(session.whatsappNumber);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,7 +37,7 @@ export function SendWhatsAppModal({
     }
     setLoading(true);
     try {
-      sessionStorage.setItem("p2s_pending_otp", phone);
+      session.setVerified(phone);
       await supabase.from("leads").insert({
         whatsapp_number: `+91${phone}`,
         air_rank: rank,
@@ -48,11 +46,7 @@ export function SendWhatsAppModal({
         source: "whatsapp_cta",
       });
       const { error: fnErr } = await supabase.functions.invoke("send-whatsapp", {
-        body: {
-          whatsapp_number: `+91${phone}`,
-          rank,
-          category,
-        },
+        body: { whatsapp_number: `+91${phone}`, rank, category },
       });
       if (fnErr) throw fnErr;
       toast.success("Sent! Check your WhatsApp in a few seconds.");
@@ -62,8 +56,7 @@ export function SendWhatsAppModal({
       toast.error("Couldn't send right now. Try again or contact us.", {
         action: {
           label: "Open WhatsApp",
-          onClick: () =>
-            window.open("https://wa.me/919999999999", "_blank"),
+          onClick: () => window.open("https://wa.me/919999999999", "_blank"),
         },
       });
       setError("Something went wrong. Please try again.");
@@ -113,7 +106,7 @@ export function SendWhatsAppModal({
           {loading && (
             <span className="h-4 w-4 rounded-full border-2 border-gold-foreground/40 border-t-gold-foreground animate-spin" />
           )}
-          {loading ? "Sending…" : "Send Now"}
+          {loading ? "Sending…" : session.isVerified ? "Send Now" : "Send Now"}
         </button>
       </form>
     </Modal>
