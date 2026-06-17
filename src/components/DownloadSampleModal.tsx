@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@/components/Modal";
 import { PhoneOtpForm } from "@/components/PhoneOtp";
 import { supabase } from "@/integrations/supabase/client";
 import { DUMMY_COLLEGES } from "@/lib/constants";
+import { useAuthSession } from "@/lib/session";
+import { useModals } from "@/lib/modals";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 
@@ -20,11 +21,14 @@ export function DownloadSampleModal({
   state: string;
   category: string;
 }) {
-  const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("otp");
-  const [phone, setPhone] = useState("");
+  const session = useAuthSession();
+  const modals = useModals();
+
+  const [step, setStep] = useState<Step>(session.isVerified ? "interstitial" : "otp");
+  const [phone, setPhone] = useState(session.whatsappNumber);
 
   async function handleVerified(verifiedPhone: string) {
+    session.setVerified(verifiedPhone);
     setPhone(verifiedPhone);
     setStep("interstitial");
   }
@@ -60,6 +64,7 @@ export function DownloadSampleModal({
     <Modal onClose={onClose}>
       {step === "otp" && (
         <>
+          <p className="text-xs font-medium text-foreground/50 mb-1">Step 1 of 2</p>
           <h2 className="text-2xl font-bold text-navy">One step to get your file</h2>
           <p className="mt-2 text-sm text-foreground/70">
             Enter your WhatsApp number to continue — we'll also keep you
@@ -73,6 +78,7 @@ export function DownloadSampleModal({
 
       {step === "interstitial" && (
         <>
+          <p className="text-xs font-medium text-foreground/50 mb-1">Step 2 of 2</p>
           <h2 className="text-2xl font-bold text-navy">
             Your sample list is ready ✓
           </h2>
@@ -101,7 +107,7 @@ export function DownloadSampleModal({
             type="button"
             onClick={() => {
               onClose();
-              navigate({ to: "/purchase/$plan", params: { plan: "basic" } });
+              modals.openPurchase("basic");
             }}
             className="mt-6 w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
           >
@@ -110,8 +116,19 @@ export function DownloadSampleModal({
 
           <button
             type="button"
+            onClick={() => {
+              onClose();
+              modals.openPurchase("pro");
+            }}
+            className="mt-4 block w-full text-center text-sm text-navy font-semibold hover:underline transition"
+          >
+            Or Go Pro — ₹2999 · includes 1-on-1 mentorship →
+          </button>
+
+          <button
+            type="button"
             onClick={downloadExcel}
-            className="mt-4 block w-full text-center text-sm text-foreground/60 hover:text-navy transition"
+            className="mt-3 block w-full text-center text-sm text-foreground/60 hover:text-navy transition"
           >
             Continue with sample download →
           </button>
