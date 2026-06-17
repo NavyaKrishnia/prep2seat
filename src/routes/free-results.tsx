@@ -121,7 +121,13 @@ function FreeResults() {
         <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
           <button
             type="button"
-            onClick={() => setWaOpen(true)}
+            onClick={() =>
+              modals.openSendWhatsApp({
+                rank: input.rank,
+                state: input.state,
+                category: input.category,
+              })
+            }
             className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-gold px-6 py-3 font-bold text-gold hover:bg-gold hover:text-gold-foreground transition"
           >
             <WhatsAppIcon className="h-5 w-5" />
@@ -129,7 +135,13 @@ function FreeResults() {
           </button>
           <button
             type="button"
-            onClick={() => setDlOpen(true)}
+            onClick={() =>
+              modals.openDownloadSample({
+                rank: input.rank,
+                state: input.state,
+                category: input.category,
+              })
+            }
             className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-gold px-6 py-3 font-bold text-gold hover:bg-gold hover:text-gold-foreground transition"
           >
             <Download size={18} />
@@ -149,43 +161,26 @@ function FreeResults() {
             Counselling rounds fill fast — don't risk a wrong choice.
           </p>
           <div className="mt-7 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/purchase/$plan"
-              params={{ plan: "basic" }}
+            <button
+              type="button"
+              onClick={() => modals.openPurchase("basic")}
               className="inline-flex items-center justify-center rounded-full bg-gold px-7 py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 transition"
             >
               Get Basic — ₹999
-            </Link>
-            <Link
-              to="/purchase/$plan"
-              params={{ plan: "pro" }}
+            </button>
+            <button
+              type="button"
+              onClick={() => modals.openPurchase("pro")}
               className="inline-flex items-center justify-center rounded-full border-2 border-gold px-7 py-3.5 font-bold text-gold hover:bg-gold hover:text-gold-foreground transition"
             >
               Go Pro — ₹2999
-            </Link>
+            </button>
           </div>
           <p className="mt-5 text-xs text-navy-foreground/70">
             One-time payment · No subscription · Expert-built within 24 hours
           </p>
         </div>
       </main>
-
-      {waOpen && (
-        <SendWhatsAppModal
-          onClose={() => setWaOpen(false)}
-          rank={input.rank}
-          state={input.state}
-          category={input.category}
-        />
-      )}
-      {dlOpen && (
-        <DownloadSampleModal
-          onClose={() => setDlOpen(false)}
-          rank={input.rank}
-          state={input.state}
-          category={input.category}
-        />
-      )}
     </div>
   );
 }
