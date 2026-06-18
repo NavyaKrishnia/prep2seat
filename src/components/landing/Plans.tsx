@@ -1,5 +1,4 @@
 import { Check } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { useModals } from "@/lib/modals";
 
 type Plan = {
@@ -116,16 +115,17 @@ export function Plans() {
                 </ul>
 
                 {p.variant === "free" ? (
-                  <Link
-                    to="/free-form"
+                  <button
+                    type="button"
+                    onClick={() => modals.openFreeForm()}
                     className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] border-2 border-gold text-navy hover:bg-gold hover:text-gold-foreground"
                   >
                     {p.cta}
-                  </Link>
+                  </button>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => modals.openPurchase(p.variant as "basic" | "pro")}
+                    onClick={() => modals.openPurchase({ plan: p.variant as "basic" | "pro" })}
                     className="mt-8 w-full text-center rounded-full py-3.5 font-bold text-sm transition active:scale-[0.98] bg-gold text-gold-foreground hover:brightness-105 shadow-gold"
                   >
                     {p.cta}

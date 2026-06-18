@@ -1,7 +1,8 @@
 import { ArrowRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { useModals } from "@/lib/modals";
 
 export function Hero() {
+  const modals = useModals();
   return (
     <section id="home" className="relative pt-28 md:pt-36 pb-20 md:pb-28 overflow-hidden">
       {/* Subtle shield motif */}
@@ -37,19 +38,27 @@ export function Hero() {
             list built by experts — and walk into the right college with confidence.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Link
-              to="/free-form"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-7 py-4 text-base font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+          <div className="mt-10 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-4">
+            <button
+              type="button"
+              onClick={() => modals.openPurchase()}
+              className="order-1 sm:order-2 inline-flex items-center justify-center gap-2 rounded-full bg-gold px-8 py-4 text-base sm:text-lg font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+            >
+              Get Personalised List
+              <ArrowRight size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => modals.openFreeForm()}
+              className="order-2 sm:order-1 inline-flex items-center justify-center rounded-full border-2 border-gold px-7 py-4 text-base font-bold text-navy hover:bg-gold hover:text-gold-foreground transition"
             >
               Get Your Free List
-              <ArrowRight size={18} />
-            </Link>
+            </button>
             <a
               href="#how-it-works"
-              className="inline-flex items-center justify-center rounded-full border-2 border-navy px-7 py-4 text-base font-bold text-navy hover:bg-navy hover:text-navy-foreground transition"
+              className="order-3 inline-flex items-center justify-center gap-1.5 px-3 py-4 text-base font-semibold text-navy hover:text-gold transition"
             >
-              See How It Works
+              See How It Works <ArrowRight size={16} />
             </a>
           </div>
 
