@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
+import { useModals } from "@/lib/modals";
 
 const links = [
   { href: "#home", label: "Home" },
@@ -13,6 +13,7 @@ const links = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const modals = useModals();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -34,7 +35,7 @@ export function Navbar() {
           Prep2Seat
         </a>
 
-        <ul className="hidden md:flex items-center gap-8">
+        <ul className="hidden md:flex items-center gap-7">
           {links.map((l) => (
             <li key={l.href}>
               <a
@@ -47,20 +48,40 @@ export function Navbar() {
           ))}
         </ul>
 
-        <Link
-          to="/free-form"
-          className="hidden md:inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
-        >
-          Get Started Free
-        </Link>
+        <div className="hidden md:flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => modals.openFreeForm()}
+            className="inline-flex items-center justify-center rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-navy-foreground transition"
+          >
+            Get Started Free
+          </button>
+          <button
+            type="button"
+            onClick={() => modals.openPurchase()}
+            className="inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+          >
+            Get Personalised List →
+          </button>
+        </div>
 
-        <button
-          aria-label="Toggle menu"
-          onClick={() => setOpen((v) => !v)}
-          className="md:hidden p-2 -mr-2 text-navy"
-        >
-          {open ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile: primary CTA only + menu */}
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => modals.openPurchase()}
+            className="inline-flex items-center justify-center rounded-full bg-gold px-3.5 py-2 text-xs font-bold text-gold-foreground shadow-gold"
+          >
+            Get Personalised List →
+          </button>
+          <button
+            aria-label="Toggle menu"
+            onClick={() => setOpen((v) => !v)}
+            className="p-2 -mr-2 text-navy"
+          >
+            {open ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </nav>
 
       {open && (
@@ -78,13 +99,16 @@ export function Navbar() {
               </li>
             ))}
             <li className="pt-2">
-              <Link
-                to="/free-form"
-                onClick={() => setOpen(false)}
-                className="block text-center rounded-full bg-gold px-5 py-3 font-bold text-gold-foreground"
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  modals.openFreeForm();
+                }}
+                className="block w-full text-center rounded-full border-2 border-navy px-5 py-3 font-bold text-navy"
               >
                 Get Started Free
-              </Link>
+              </button>
             </li>
           </ul>
         </div>
