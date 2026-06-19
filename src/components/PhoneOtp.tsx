@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import { maskPhone } from "@/lib/session";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -13,12 +14,18 @@ export function PhoneOtpForm({
   onVerified,
   ctaLabel = "Send OTP",
   loadingExternal = false,
+  initialVerifiedPhone = "",
 }: {
   onVerified: (phone: string) => void | Promise<void>;
   ctaLabel?: string;
   loadingExternal?: boolean;
+  /** If provided, render a pre-verified confirm step with a "Proceed →" button. */
+  initialVerifiedPhone?: string;
 }) {
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialVerifiedPhone);
+  const [confirmingVerified, setConfirmingVerified] = useState(
+    !!initialVerifiedPhone,
+  );
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -79,7 +86,82 @@ export function PhoneOtpForm({
     setError("");
   }
 
+  async function handleProceedVerified(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Please enter a valid 10-digit number");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await onVerified(phone);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setVerifying(false);
+    }
+  }
+
+  function useDifferentNumber() {
+    setConfirmingVerified(false);
+    setPhone("");
+    setError("");
+  }
+
   const busy = verifying || loadingExternal;
+
+  // FIX 5: pre-verified confirm step (Almost there)
+  if (confirmingVerified && !otpSent) {
+    return (
+      <form onSubmit={handleProceedVerified} className="space-y-5">
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-1.5">
+            <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+            WhatsApp number — make sure this is correct
+          </label>
+          <div className="flex">
+            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-input bg-secondary text-sm font-medium">
+              +91
+            </span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={10}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              className="flex-1 rounded-r-lg border border-input bg-background px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold"
+              required
+            />
+          </div>
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1ea34d]">
+            <Check size={12} strokeWidth={3} /> Verified
+          </div>
+          <p className="mt-2 text-xs text-foreground/60">
+            This should be your WhatsApp number — we'll send updates here
+          </p>
+        </div>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition disabled:opacity-70"
+        >
+          {busy ? "Please wait…" : "Proceed →"}
+        </button>
+
+        <button
+          type="button"
+          onClick={useDifferentNumber}
+          className="block mx-auto text-xs font-semibold text-navy hover:underline"
+        >
+          Use a different number?
+        </button>
+      </form>
+    );
+  }
 
   if (!otpSent) {
     return (
