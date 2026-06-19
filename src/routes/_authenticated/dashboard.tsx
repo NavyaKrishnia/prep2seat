@@ -128,6 +128,7 @@ function Dashboard() {
           </p>
         </div>
       </main>
+      <PageFooterSections />
     </div>
   );
 }
