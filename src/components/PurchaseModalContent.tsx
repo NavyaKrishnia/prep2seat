@@ -6,7 +6,7 @@ import { signUpOrSignInWithPhone } from "@/lib/auth-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/session";
 import { toast } from "sonner";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, MessageCircle } from "lucide-react";
 
 const SUPPORT_WHATSAPP = "919999999999";
 
@@ -21,9 +21,9 @@ export function PurchaseModalContent({
   const details = PLAN_DETAILS[plan];
   const session = useAuthSession();
 
-  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(
-    session.isVerified ? session.whatsappNumber : null,
-  );
+  // Verified phone for payment step (Step 2). Not pre-set even when session is
+  // verified — Step 1 must always be shown for confirmation per FIX 5.
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -71,10 +71,17 @@ export function PurchaseModalContent({
         <p className="text-xs font-medium text-foreground/50 mb-1">Step 1 of 2</p>
         <h1 className="text-2xl font-bold text-navy">Almost there</h1>
         <p className="mt-1 text-sm text-foreground/70">
-          Verify your WhatsApp number to continue with {details.name}
+          {session.isVerified
+            ? `Confirm your WhatsApp number to continue with ${details.name}`
+            : `Verify your WhatsApp number to continue with ${details.name}`}
         </p>
         <div className="mt-6">
-          <PhoneOtpForm onVerified={onVerified} />
+          <PhoneOtpForm
+            onVerified={onVerified}
+            initialVerifiedPhone={
+              session.isVerified ? session.whatsappNumber : ""
+            }
+          />
         </div>
       </>
     );
@@ -124,19 +131,16 @@ export function PurchaseModalContent({
         🔒 Secure payment · GST included · 24hr delivery
       </p>
 
-      {error && (
-        <p className="mt-3 text-xs text-center">
-          Need help?{" "}
-          <a
-            href={`https://wa.me/${SUPPORT_WHATSAPP}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-navy font-semibold hover:underline"
-          >
-            Contact us on WhatsApp →
-          </a>
-        </p>
-      )}
+      {/* FIX 1: WhatsApp support CTA below Pay Now, green like the contact CTA */}
+      <a
+        href={`https://wa.me/${SUPPORT_WHATSAPP}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full bg-whatsapp px-5 py-3 text-sm font-bold text-white hover:brightness-105 active:scale-[0.98] transition shadow-card"
+      >
+        <MessageCircle size={18} />
+        Have questions? Chat with us on WhatsApp
+      </a>
     </div>
   );
 }
