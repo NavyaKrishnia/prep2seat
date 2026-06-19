@@ -12,7 +12,6 @@ import type { LeadCtx } from "@/lib/sample-download";
 type ModalKind =
   | "none"
   | "free-form"
-  | "free-results"
   | "whatsapp-capture"
   | "download-auth"
   | "purchase"
@@ -20,11 +19,13 @@ type ModalKind =
 
 type ModalsContextValue = {
   kind: ModalKind;
+  resultsOpen: boolean;
   leadCtx: LeadCtx | null;
   selectedPlan: PlanKey | null;
   sampleAvailable: boolean;
   openFreeForm: () => void;
   openFreeResults: (ctx?: LeadCtx) => void;
+  closeResults: () => void;
   openWhatsAppCapture: (ctx: LeadCtx) => void;
   openDownloadAuth: (ctx: LeadCtx) => void;
   openPurchase: (opts?: { plan?: PlanKey; sampleAvailable?: boolean; ctx?: LeadCtx }) => void;
@@ -37,6 +38,7 @@ const ModalsContext = createContext<ModalsContextValue | null>(null);
 
 export function ModalsProvider({ children }: { children: React.ReactNode }) {
   const [kind, setKind] = useState<ModalKind>("none");
+  const [resultsOpen, setResultsOpen] = useState(false);
   const [leadCtx, setLeadCtxState] = useState<LeadCtx | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(null);
   const [sampleAvailable, setSampleAvailable] = useState(false);
@@ -47,11 +49,17 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
     setSelectedPlan(null);
   }, []);
 
+  const closeResults = useCallback(() => {
+    setResultsOpen(false);
+    setKind("none");
+  }, []);
+
   const openFreeForm = useCallback(() => setKind("free-form"), []);
 
   const openFreeResults = useCallback((ctx?: LeadCtx) => {
     if (ctx) setLeadCtxState(ctx);
-    setKind("free-results");
+    setResultsOpen(true);
+    setKind("none");
   }, []);
 
   const openWhatsAppCapture = useCallback((ctx: LeadCtx) => {
@@ -64,9 +72,21 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
     setKind("download-auth");
   }, []);
 
+  const openPurchasePayment = useCallback((plan: PlanKey) => {
+    setSelectedPlan(plan);
+    setKind("purchase-payment");
+  }, []);
+
   const openPurchase = useCallback(
     (opts?: { plan?: PlanKey; sampleAvailable?: boolean; ctx?: LeadCtx }) => {
       if (opts?.ctx) setLeadCtxState(opts.ctx);
+      // FIX 1: Pro plan skips the Choose Your Plan modal — go straight to payment.
+      if (opts?.plan === "pro") {
+        setSelectedPlan("pro");
+        setSampleAvailable(!!opts?.sampleAvailable);
+        setKind("purchase-payment");
+        return;
+      }
       if (opts?.plan) setSelectedPlan(opts.plan);
       setSampleAvailable(!!opts?.sampleAvailable);
       setKind("purchase");
@@ -74,20 +94,17 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const openPurchasePayment = useCallback((plan: PlanKey) => {
-    setSelectedPlan(plan);
-    setKind("purchase-payment");
-  }, []);
-
   const setLeadCtx = useCallback((ctx: LeadCtx) => setLeadCtxState(ctx), []);
 
   const value: ModalsContextValue = {
     kind,
+    resultsOpen,
     leadCtx,
     selectedPlan,
     sampleAvailable,
     openFreeForm,
     openFreeResults,
+    closeResults,
     openWhatsAppCapture,
     openDownloadAuth,
     openPurchase,
@@ -100,15 +117,16 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
     <ModalsContext.Provider value={value}>
       {children}
 
-      {kind === "free-form" && (
-        <Modal onClose={close}>
-          <FreeFormModalContent />
+      {/* Free-results renders as its own fullscreen layer; stays mounted while sub-modals open on top */}
+      {resultsOpen && (
+        <Modal onClose={closeResults} variant="fullscreen" showClose={false}>
+          <FreeResultsModalContent onClose={closeResults} />
         </Modal>
       )}
 
-      {kind === "free-results" && (
-        <Modal onClose={close} variant="fullscreen" showClose>
-          <FreeResultsModalContent onClose={close} />
+      {kind === "free-form" && (
+        <Modal onClose={close}>
+          <FreeFormModalContent />
         </Modal>
       )}
 
