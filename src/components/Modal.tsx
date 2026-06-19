@@ -20,7 +20,7 @@ export function Modal({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape" && showClose) close();
     };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;

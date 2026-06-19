@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
+import { PageFooterSections } from "@/components/PageFooterSections";
 import { Download, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -127,6 +128,7 @@ function Dashboard() {
           </p>
         </div>
       </main>
+      <PageFooterSections />
     </div>
   );
 }
