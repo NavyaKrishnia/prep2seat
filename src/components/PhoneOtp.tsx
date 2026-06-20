@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { maskPhone } from "@/lib/session";
+import { sendOtp, verifyOtpAndSignIn } from "@/lib/auth-otp";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
   return (
@@ -31,27 +32,33 @@ export function PhoneOtpForm({
   const [error, setError] = useState("");
   const [resendIn, setResendIn] = useState(0);
   const [verifying, setVerifying] = useState(false);
+  const [sending, setSending] = useState(false);
   const otpRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!otpSent) return;
-    setResendIn(15);
+    setResendIn(30);
     const id = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
     setTimeout(() => otpRef.current?.focus(), 250);
     return () => clearInterval(id);
   }, [otpSent]);
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!/^\d{10}$/.test(phone)) {
       setError("Please enter a valid 10-digit number");
       return;
     }
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("p2s_pending_otp", phone);
+    setSending(true);
+    try {
+      await sendOtp(phone);
+      setOtpSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send OTP");
+    } finally {
+      setSending(false);
     }
-    setOtpSent(true);
   }
 
   async function tryVerify(code: string) {
@@ -60,9 +67,11 @@ export function PhoneOtpForm({
     setVerifying(true);
     setError("");
     try {
+      await verifyOtpAndSignIn(phone, code);
       await onVerified(phone);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
+      setOtp("");
       setVerifying(false);
     }
   }
@@ -73,11 +82,19 @@ export function PhoneOtpForm({
     if (digits.length === 6) tryVerify(digits);
   }
 
-  function handleResend() {
-    if (resendIn > 0) return;
+  async function handleResend() {
+    if (resendIn > 0 || sending) return;
     setOtp("");
     setError("");
-    setResendIn(15);
+    setSending(true);
+    try {
+      await sendOtp(phone);
+      setResendIn(30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend");
+    } finally {
+      setSending(false);
+    }
   }
 
   function changeNumber() {
