@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { PhoneOtpForm } from "@/components/PhoneOtp";
 import { PLAN_DETAILS, type PlanKey } from "@/lib/constants";
-import { signUpOrSignInWithPhone } from "@/lib/auth-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/session";
 import { toast } from "sonner";
@@ -39,22 +38,28 @@ export function PurchaseModalContent({
     setError("");
     try {
       await new Promise((r) => setTimeout(r, 900));
-      const userId = await signUpOrSignInWithPhone(verifiedPhone);
+      // The user is now authenticated via the server-issued OTP magic-link
+      // exchange performed inside PhoneOtpForm. Use the real session user.
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        throw new Error("Please verify your number again to continue.");
+      }
+      const userId = userData.user.id;
+      // payment_status / plan / payment_date are deliberately omitted: a
+      // column-level GRANT prevents authenticated users from setting them.
+      // The backend marks the profile as paid once payment is confirmed.
       const { error: upsertErr } = await supabase
         .from("student_profiles")
         .upsert(
           {
             user_id: userId,
             whatsapp_number: verifiedPhone,
-            plan,
-            payment_status: "paid",
-            payment_date: new Date().toISOString(),
             list_status: "pending",
           },
           { onConflict: "user_id" },
         );
       if (upsertErr) throw upsertErr;
-      toast.success("Payment successful!");
+      toast.success("Verified! Complete payment to activate your plan.");
       session.setSessionPlan(plan);
       onClose();
       navigate({ to: "/onboarding" });

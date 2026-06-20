@@ -210,9 +210,10 @@ export function PhoneOtpForm({
 
         <button
           type="submit"
-          className="w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+          disabled={sending}
+          className="w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition disabled:opacity-70"
         >
-          {ctaLabel}
+          {sending ? "Sending…" : ctaLabel}
         </button>
       </form>
     );
