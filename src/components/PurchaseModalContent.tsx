@@ -7,7 +7,7 @@ import { useAuthSession } from "@/lib/session";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, MessageCircle } from "lucide-react";
 
-const SUPPORT_WHATSAPP = "919999999999";
+const SUPPORT_WHATSAPP = "916378489833";
 
 export function PurchaseModalContent({
   plan,

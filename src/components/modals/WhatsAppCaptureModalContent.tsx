@@ -55,7 +55,7 @@ export function WhatsAppCaptureModalContent({
       toast.error("Couldn't send right now. Try again or contact us.", {
         action: {
           label: "Open WhatsApp",
-          onClick: () => window.open("https://wa.me/919999999999", "_blank"),
+          onClick: () => window.open("https://wa.me/916378489833", "_blank"),
         },
       });
       setError("Something went wrong. Please try again.");

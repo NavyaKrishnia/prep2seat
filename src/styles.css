@@ -109,3 +109,12 @@
     letter-spacing: -0.02em;
   }
 }
+
+@layer utilities {
+  .btn-gold {
+    @apply transition-all duration-200 ease-out;
+  }
+  .btn-gold:hover {
+    @apply scale-[1.04] brightness-110;
+  }
+}
