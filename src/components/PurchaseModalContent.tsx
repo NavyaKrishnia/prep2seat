@@ -54,6 +54,7 @@ export function PurchaseModalContent({
           {
             user_id: userId,
             whatsapp_number: verifiedPhone,
+            plan,
             list_status: "pending",
           },
           { onConflict: "user_id" },
