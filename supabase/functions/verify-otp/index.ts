@@ -39,6 +39,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (!Deno.env.get("INTERAKT_API_KEY")) {
+      return new Response(
+        JSON.stringify({
+          error: "WhatsApp OTP service not configured. Please contact support.",
+        }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const { phone, code } = await req.json();
     const canonical = normalizePhone(phone);
     if (!canonical || !/^\d{6}$/.test(String(code ?? ""))) {
