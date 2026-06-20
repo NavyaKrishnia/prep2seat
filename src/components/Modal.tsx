@@ -1,16 +1,18 @@
 import { useEffect } from "react";
-import { X } from "lucide-react";
+import { X, ChevronLeft } from "lucide-react";
 
 type Variant = "default" | "wide" | "fullscreen";
 
 export function Modal({
   children,
   onClose,
+  onBack,
   variant = "default",
   showClose = true,
 }: {
   children: React.ReactNode;
   onClose?: () => void;
+  onBack?: () => void;
   variant?: Variant;
   showClose?: boolean;
 }) {
@@ -50,8 +52,7 @@ export function Modal({
     );
   }
 
-  const maxW =
-    variant === "wide" ? "max-w-[680px]" : "max-w-md";
+  const maxW = variant === "wide" ? "max-w-[680px]" : "max-w-md";
 
   return (
     <div
@@ -62,6 +63,16 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
         className={`relative w-full ${maxW} bg-card rounded-2xl border border-border shadow-card-hover my-auto`}
       >
+        {onBack && (
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={onBack}
+            className="absolute top-3 left-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground/60 hover:bg-secondary hover:text-navy transition"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
         {showClose && (
           <button
             type="button"

@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
-import { maskPhone } from "@/lib/session";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { Check, Pencil } from "lucide-react";
 import { sendOtp, verifyOtpAndSignIn } from "@/lib/auth-otp";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -11,18 +16,28 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
   );
 }
 
-export function PhoneOtpForm({
-  onVerified,
-  ctaLabel = "Send OTP",
-  loadingExternal = false,
-  initialVerifiedPhone = "",
-}: {
-  onVerified: (phone: string) => void | Promise<void>;
-  ctaLabel?: string;
-  loadingExternal?: boolean;
-  /** If provided, render a pre-verified confirm step with a "Proceed →" button. */
-  initialVerifiedPhone?: string;
-}) {
+export type PhoneOtpFormHandle = { backToPhone: () => void };
+export type PhoneOtpStep = "phone" | "otp" | "verified-confirm";
+
+export const PhoneOtpForm = forwardRef<
+  PhoneOtpFormHandle,
+  {
+    onVerified: (phone: string) => void | Promise<void>;
+    ctaLabel?: string;
+    loadingExternal?: boolean;
+    initialVerifiedPhone?: string;
+    onStepChange?: (step: PhoneOtpStep) => void;
+  }
+>(function PhoneOtpForm(
+  {
+    onVerified,
+    ctaLabel = "Send OTP",
+    loadingExternal = false,
+    initialVerifiedPhone = "",
+    onStepChange,
+  },
+  ref,
+) {
   const [phone, setPhone] = useState(initialVerifiedPhone);
   const [confirmingVerified, setConfirmingVerified] = useState(
     !!initialVerifiedPhone,
@@ -37,11 +52,29 @@ export function PhoneOtpForm({
 
   useEffect(() => {
     if (!otpSent) return;
-    setResendIn(30);
+    setResendIn(15);
     const id = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
     setTimeout(() => otpRef.current?.focus(), 250);
     return () => clearInterval(id);
   }, [otpSent]);
+
+  // Emit current step
+  useEffect(() => {
+    const step: PhoneOtpStep = otpSent
+      ? "otp"
+      : confirmingVerified
+        ? "verified-confirm"
+        : "phone";
+    onStepChange?.(step);
+  }, [otpSent, confirmingVerified, onStepChange]);
+
+  useImperativeHandle(ref, () => ({
+    backToPhone: () => {
+      setOtpSent(false);
+      setOtp("");
+      setError("");
+    },
+  }));
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -89,18 +122,12 @@ export function PhoneOtpForm({
     setSending(true);
     try {
       await sendOtp(phone);
-      setResendIn(30);
+      setResendIn(15);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not resend");
     } finally {
       setSending(false);
     }
-  }
-
-  function changeNumber() {
-    setOtpSent(false);
-    setOtp("");
-    setError("");
   }
 
   async function handleProceedVerified(e: React.FormEvent) {
@@ -127,7 +154,7 @@ export function PhoneOtpForm({
 
   const busy = verifying || loadingExternal;
 
-  // FIX 5: pre-verified confirm step (Almost there)
+  // Pre-verified confirm step
   if (confirmingVerified && !otpSent) {
     return (
       <form onSubmit={handleProceedVerified} className="space-y-5">
@@ -137,19 +164,26 @@ export function PhoneOtpForm({
             WhatsApp number — make sure this is correct
           </label>
           <div className="flex">
-            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-input bg-secondary text-sm font-medium">
+            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-input bg-secondary text-sm font-medium text-foreground/60">
               +91
             </span>
-            <input
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              maxLength={10}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-              className="flex-1 rounded-r-lg border border-input bg-background px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold"
-              required
-            />
+            <div className="flex-1 relative">
+              <input
+                type="tel"
+                value={phone}
+                readOnly
+                aria-readonly="true"
+                className="w-full rounded-r-lg border border-input bg-muted/60 px-4 py-3 pr-11 cursor-not-allowed text-foreground/80 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={useDifferentNumber}
+                aria-label="Use a different number"
+                className="absolute inset-y-0 right-2 my-auto inline-flex h-7 w-7 items-center justify-center rounded-full text-gold hover:bg-gold/10 transition"
+              >
+                <Pencil size={14} />
+              </button>
+            </div>
           </div>
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 px-2.5 py-1 text-[11px] font-semibold text-[#1ea34d]">
             <Check size={12} strokeWidth={3} /> Verified
@@ -167,14 +201,6 @@ export function PhoneOtpForm({
           className="w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition disabled:opacity-70"
         >
           {busy ? "Please wait…" : "Proceed →"}
-        </button>
-
-        <button
-          type="button"
-          onClick={useDifferentNumber}
-          className="block mx-auto text-xs font-semibold text-navy hover:underline"
-        >
-          Use a different number?
         </button>
       </form>
     );
@@ -211,12 +237,16 @@ export function PhoneOtpForm({
         <button
           type="submit"
           disabled={sending}
-          className="w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition disabled:opacity-70"
+          className="btn-gold w-full rounded-full bg-gold py-3.5 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition disabled:opacity-70"
         >
           {sending ? "Sending…" : ctaLabel}
         </button>
       </form>
     );
+  }
+
+  function focusOtp() {
+    otpRef.current?.focus();
   }
 
   return (
@@ -226,19 +256,27 @@ export function PhoneOtpForm({
           Enter the 6-digit OTP
         </label>
         <p className="text-xs text-foreground/60 mb-3">
-          Sent to <span className="font-semibold text-navy">+91 {maskPhone(phone)}</span>
+          Sent to <span className="font-semibold text-navy">+91 {phone}</span>
         </p>
-        <div className="relative">
+        <div className="relative" onClick={focusOtp}>
           <input
             ref={otpRef}
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
+            name="otp"
             maxLength={6}
             value={otp}
             onChange={(e) => onOtpChange(e.target.value)}
+            onPaste={(e) => {
+              const t = e.clipboardData.getData("text");
+              if (/\d/.test(t)) {
+                e.preventDefault();
+                onOtpChange(t);
+              }
+            }}
             disabled={busy}
-            className="absolute inset-0 w-full h-full opacity-0 text-center tracking-[2em]"
+            className="absolute inset-0 w-full h-full opacity-0 text-center tracking-[2em] cursor-pointer"
             aria-label="OTP"
           />
           <div className="flex justify-center gap-3 pointer-events-none">
@@ -259,14 +297,7 @@ export function PhoneOtpForm({
         {busy && (
           <p className="mt-3 text-sm text-foreground/60 text-center">Verifying…</p>
         )}
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <button
-            type="button"
-            onClick={changeNumber}
-            className="text-navy font-semibold hover:underline"
-          >
-            ← Change number
-          </button>
+        <div className="mt-4 flex items-center justify-end text-sm">
           <button
             type="button"
             onClick={handleResend}
@@ -279,4 +310,4 @@ export function PhoneOtpForm({
       </div>
     </div>
   );
-}
+});

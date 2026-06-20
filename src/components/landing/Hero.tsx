@@ -42,7 +42,7 @@ export function Hero() {
             <button
               type="button"
               onClick={() => modals.openPurchase()}
-              className="order-1 sm:order-2 inline-flex items-center justify-center gap-2 rounded-full bg-gold px-8 py-4 text-base sm:text-lg font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+              className="btn-gold order-1 sm:order-2 inline-flex items-center justify-center gap-2 rounded-full bg-gold px-8 py-4 text-base sm:text-lg font-bold text-gold-foreground shadow-gold"
             >
               Get Personalised List
               <ArrowRight size={18} />

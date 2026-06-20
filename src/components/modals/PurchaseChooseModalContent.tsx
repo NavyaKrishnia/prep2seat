@@ -4,7 +4,7 @@ import { useAuthSession } from "@/lib/session";
 import { downloadSampleExcel, type LeadCtx } from "@/lib/sample-download";
 import { toast } from "sonner";
 
-const SUPPORT_WHATSAPP = "https://wa.me/919999999999";
+const SUPPORT_WHATSAPP = "https://wa.me/916378489833";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
   return (

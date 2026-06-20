@@ -59,7 +59,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => modals.openPurchase()}
-            className="inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
+            className="btn-gold inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold"
           >
             Get Personalised List →
           </button>
@@ -70,7 +70,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => modals.openPurchase()}
-            className="inline-flex items-center justify-center rounded-full bg-gold px-3.5 py-2 text-xs font-bold text-gold-foreground shadow-gold"
+            className="btn-gold inline-flex items-center justify-center rounded-full bg-gold px-3.5 py-2 text-xs font-bold text-gold-foreground shadow-gold"
           >
             Get Personalised List →
           </button>

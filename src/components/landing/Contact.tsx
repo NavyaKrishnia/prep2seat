@@ -13,7 +13,7 @@ export function Contact() {
 
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="https://wa.me/910000000000"
+            href="https://wa.me/916378489833"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 rounded-full bg-whatsapp px-7 py-4 text-base font-bold text-white hover:brightness-105 active:scale-[0.98] transition shadow-card"
