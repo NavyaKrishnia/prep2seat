@@ -36,6 +36,29 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require an authenticated Supabase caller. The platform also enforces
+    // verify_jwt = true in supabase/config.toml; this is defence in depth.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.0");
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: userRes, error: userErr } = await authClient.auth.getUser();
+    if (userErr || !userRes?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { whatsapp_number, rank, category } = await req.json();
 
     if (!whatsapp_number) {
@@ -45,8 +68,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiKey =
-      Deno.env.get("INTERAKT_API_KEY") ?? "INTERAKT_API_KEY_PLACEHOLDER";
+    const apiKey = Deno.env.get("INTERAKT_API_KEY");
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "Messaging not configured" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Normalize to country code 91 + 10-digit number (no plus).
     const digits = String(whatsapp_number).replace(/\D/g, "");
