@@ -7,7 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Toggle this to false once Twilio Edge Functions are confirmed working ───
-const FORCE_FALLBACK = false;
+const FORCE_FALLBACK = true; // set to false once Twilio SMS is confirmed working
 // ─────────────────────────────────────────────────────────────────────────────
 
 function normalizePhone(phone: string) {
