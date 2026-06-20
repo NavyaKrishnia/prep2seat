@@ -3,9 +3,9 @@ import { Modal } from "@/components/Modal";
 import { FreeFormModalContent } from "@/components/modals/FreeFormModalContent";
 import { FreeResultsModalContent } from "@/components/modals/FreeResultsModalContent";
 import { WhatsAppCaptureModalContent } from "@/components/modals/WhatsAppCaptureModalContent";
-import { DownloadAuthModalContent } from "@/components/modals/DownloadAuthModalContent";
+import { DownloadAuthModal } from "@/components/modals/DownloadAuthModalContent";
 import { PurchaseChooseModalContent } from "@/components/modals/PurchaseChooseModalContent";
-import { PurchaseModalContent } from "@/components/PurchaseModalContent";
+import { PurchasePaymentModal } from "@/components/PurchasePaymentModal";
 import type { PlanKey } from "@/lib/constants";
 import type { LeadCtx } from "@/lib/sample-download";
 
@@ -137,9 +137,7 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {kind === "download-auth" && leadCtx && (
-        <Modal onClose={close}>
-          <DownloadAuthModalContent onClose={close} {...leadCtx} />
-        </Modal>
+        <DownloadAuthModal onClose={close} {...leadCtx} />
       )}
 
       {kind === "purchase" && (
@@ -153,9 +151,7 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {kind === "purchase-payment" && selectedPlan && (
-        <Modal onClose={close}>
-          <PurchaseModalContent plan={selectedPlan} onClose={close} />
-        </Modal>
+        <PurchasePaymentModal plan={selectedPlan} onClose={close} />
       )}
     </ModalsContext.Provider>
   );
