@@ -1,6 +1,6 @@
-// Server-side OTP verification. Validates submitted code against stored hash,
-// marks it consumed, then issues a Supabase magic-link token the client
-// exchanges for a real session. No external API needed here.
+// Server-side OTP issuance. Generates a 6-digit code, stores its SHA-256 hash
+// with expiry + attempt limits in phone_otps table, then sends via Twilio SMS.
+// The plaintext code is NEVER returned to the client.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -9,8 +9,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const MAX_ATTEMPTS = 5;
 
 async function sha256(text: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -26,9 +24,36 @@ function normalizePhone(input: string) {
   return null;
 }
 
-function phoneEmail(canonical: string) {
-  // Stable internal email for auth — never exposed to user, never used for login
-  return `phone${canonical.replace(/\D/g, "")}@prep2seat.app`;
+async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; reason?: string }> {
+  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+
+  if (!accountSid || !authToken || !fromNumber) {
+    return { ok: false, reason: "missing_twilio_config" };
+  }
+
+  try {
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      },
+      body: new URLSearchParams({ To: to, From: fromNumber, Body: body }).toString(),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("Twilio SMS error", res.status, err);
+      return { ok: false, reason: `twilio_${res.status}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("Twilio network error", err);
+    return { ok: false, reason: "network_error" };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -37,13 +62,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // NOTE: No Interakt/Twilio check here — verify never sends messages
-    const { phone, code } = await req.json();
-
-    const canonical = normalizePhone(phone);
-    if (!canonical || !/^\d{6}$/.test(String(code ?? ""))) {
+    // Check Twilio config upfront
+    if (
+      !Deno.env.get("TWILIO_ACCOUNT_SID") ||
+      !Deno.env.get("TWILIO_AUTH_TOKEN") ||
+      !Deno.env.get("TWILIO_PHONE_NUMBER")
+    ) {
       return new Response(
-        JSON.stringify({ error: "Invalid phone number or code format." }),
+        JSON.stringify({ error: "SMS service not configured. Please contact support." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { phone } = await req.json();
+    const canonical = normalizePhone(phone);
+    if (!canonical) {
+      return new Response(
+        JSON.stringify({ error: "Invalid phone number. Please enter a 10-digit Indian mobile number." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -53,104 +88,57 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch the most recent unconsumed OTP for this phone
-    const { data: row, error: selErr } = await supabaseAdmin
+    // Throttle: reject if a non-consumed OTP was issued less than 15 seconds ago
+    const fifteenSecondsAgo = new Date(Date.now() - 15 * 1000).toISOString();
+    const { data: recent } = await supabaseAdmin
       .from("phone_otps")
-      .select("*")
+      .select("id, created_at")
       .eq("phone", canonical)
       .is("consumed_at", null)
-      .order("created_at", { ascending: false })
+      .gte("created_at", fifteenSecondsAgo)
       .limit(1)
       .maybeSingle();
 
-    if (selErr) throw selErr;
-
-    if (!row) {
+    if (recent) {
       return new Response(
-        JSON.stringify({ error: "No active code found. Please request a new OTP." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (new Date(row.expires_at).getTime() < Date.now()) {
-      return new Response(
-        JSON.stringify({ error: "Code has expired. Please request a new OTP." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (row.attempts >= MAX_ATTEMPTS) {
-      return new Response(
-        JSON.stringify({ error: "Too many incorrect attempts. Please request a new OTP." }),
+        JSON.stringify({ error: "Please wait before requesting another code." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify hash
-    const submittedHash = await sha256(`${canonical}:${code}`);
-    if (submittedHash !== row.code_hash) {
-      await supabaseAdmin
-        .from("phone_otps")
-        .update({ attempts: row.attempts + 1 })
-        .eq("id", row.id);
+    // Generate 6-digit code and store hash
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codeHash = await sha256(`${canonical}:${code}`);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min expiry
 
-      const remaining = MAX_ATTEMPTS - (row.attempts + 1);
+    const { error: insertErr } = await supabaseAdmin.from("phone_otps").insert({
+      phone: canonical,
+      code_hash: codeHash,
+      expires_at: expiresAt,
+    });
+    if (insertErr) throw insertErr;
+
+    // Send OTP via Twilio SMS
+    const smsBody = `Your Prep2Seat OTP is: ${code}. Valid for 10 minutes. Do not share this with anyone.`;
+    const sendResult = await sendTwilioSms(canonical, smsBody);
+
+    if (!sendResult.ok) {
+      // Clean up the OTP row if SMS failed so user can try again
+      await supabaseAdmin.from("phone_otps").delete().eq("code_hash", codeHash);
+      console.error("SMS dispatch failed", sendResult);
       return new Response(
-        JSON.stringify({
-          error: remaining > 0
-            ? `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
-            : "Too many incorrect attempts. Please request a new OTP.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to send OTP. Please try again." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Mark OTP as consumed
-    await supabaseAdmin
-      .from("phone_otps")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", row.id);
-
-    // Provision or find auth user for this phone
-    const email = phoneEmail(canonical);
-    let userId: string | null = null;
-
-    // Check if user already exists
-    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const existing = list?.users?.find((u) => u.email === email);
-    userId = existing?.id ?? null;
-
-    if (!userId) {
-      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: { whatsapp_number: canonical },
-      });
-      if (createErr) throw createErr;
-      userId = created.user?.id ?? null;
-    }
-
-    if (!userId) throw new Error("Could not provision auth user");
-
-    // Issue magic-link token for client to exchange into a session
-    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    if (linkErr) throw linkErr;
-
-    // @ts-ignore - hashed_token exists at runtime
-    const tokenHash = linkData?.properties?.hashed_token ?? linkData?.properties?.token_hash;
-    if (!tokenHash) throw new Error("Could not generate auth token");
-
-    return new Response(
-      JSON.stringify({ success: true, email, token_hash: tokenHash }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (err) {
-    console.error("verify-otp failed", err);
+    console.error("send-otp failed", err);
     return new Response(
-      JSON.stringify({ success: false, error: "Verification failed. Please try again." }),
+      JSON.stringify({ success: false, error: "Could not send OTP. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
