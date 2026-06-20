@@ -1,13 +1,12 @@
-// Server-side OTP verification. Validates the user-submitted code against the
-// stored hash, marks it consumed, then issues a Supabase magic-link token the
-// client exchanges for a real session via supabase.auth.verifyOtp().
+// Server-side OTP verification. Validates submitted code against stored hash,
+// marks it consumed, then issues a Supabase magic-link token the client
+// exchanges for a real session. No external API needed here.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -28,8 +27,7 @@ function normalizePhone(input: string) {
 }
 
 function phoneEmail(canonical: string) {
-  // Stable, non-routable internal email derived from canonical phone.
-  // Auth is via OTP only; no password ever issued to the client.
+  // Stable internal email for auth — never exposed to user, never used for login
   return `phone${canonical.replace(/\D/g, "")}@prep2seat.app`;
 }
 
@@ -39,28 +37,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!Deno.env.get("INTERAKT_API_KEY")) {
-      return new Response(
-        JSON.stringify({
-          error: "WhatsApp OTP service not configured. Please contact support.",
-        }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    // NOTE: No Interakt/Twilio check here — verify never sends messages
     const { phone, code } = await req.json();
+
     const canonical = normalizePhone(phone);
     if (!canonical || !/^\d{6}$/.test(String(code ?? ""))) {
       return new Response(
-        JSON.stringify({ error: "Invalid phone or code" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Invalid phone number or code format." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Fetch the most recent unconsumed OTP for this phone
     const { data: row, error: selErr } = await supabaseAdmin
       .from("phone_otps")
       .select("*")
@@ -71,95 +64,94 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (selErr) throw selErr;
+
     if (!row) {
       return new Response(
-        JSON.stringify({ error: "No active code. Request a new OTP." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "No active code found. Please request a new OTP." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (new Date(row.expires_at).getTime() < Date.now()) {
       return new Response(
-        JSON.stringify({ error: "Code expired. Request a new OTP." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Code has expired. Please request a new OTP." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (row.attempts >= MAX_ATTEMPTS) {
       return new Response(
-        JSON.stringify({ error: "Too many attempts. Request a new OTP." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Too many incorrect attempts. Please request a new OTP." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Verify hash
     const submittedHash = await sha256(`${canonical}:${code}`);
     if (submittedHash !== row.code_hash) {
       await supabaseAdmin
         .from("phone_otps")
         .update({ attempts: row.attempts + 1 })
         .eq("id", row.id);
+
+      const remaining = MAX_ATTEMPTS - (row.attempts + 1);
       return new Response(
-        JSON.stringify({ error: "Incorrect code" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: remaining > 0
+            ? `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+            : "Too many incorrect attempts. Please request a new OTP.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Mark consumed
+    // Mark OTP as consumed
     await supabaseAdmin
       .from("phone_otps")
       .update({ consumed_at: new Date().toISOString() })
       .eq("id", row.id);
 
-    // Ensure an auth user exists for this phone (internal email mapping).
+    // Provision or find auth user for this phone
     const email = phoneEmail(canonical);
-
-    // Try to find existing user via listUsers filter
     let userId: string | null = null;
-    {
-      const { data: list } = await supabaseAdmin.auth.admin.listUsers();
-      const existing = list?.users?.find((u) => u.email === email);
-      userId = existing?.id ?? null;
-    }
+
+    // Check if user already exists
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const existing = list?.users?.find((u) => u.email === email);
+    userId = existing?.id ?? null;
 
     if (!userId) {
-      const { data: created, error: createErr } =
-        await supabaseAdmin.auth.admin.createUser({
-          email,
-          email_confirm: true,
-          user_metadata: { whatsapp_number: canonical },
-        });
+      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { whatsapp_number: canonical },
+      });
       if (createErr) throw createErr;
       userId = created.user?.id ?? null;
     }
+
     if (!userId) throw new Error("Could not provision auth user");
 
-    // Issue a magic-link token the client can exchange for a session.
-    const { data: linkData, error: linkErr } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-      });
+    // Issue magic-link token for client to exchange into a session
+    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
     if (linkErr) throw linkErr;
 
-    const tokenHash =
-      // @ts-ignore - properties exists at runtime
-      linkData?.properties?.hashed_token ?? linkData?.properties?.token_hash;
-
+    // @ts-ignore - hashed_token exists at runtime
+    const tokenHash = linkData?.properties?.hashed_token ?? linkData?.properties?.token_hash;
     if (!tokenHash) throw new Error("Could not generate auth token");
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        email,
-        token_hash: tokenHash,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: true, email, token_hash: tokenHash }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("verify-otp failed", err);
     return new Response(
-      JSON.stringify({ success: false, error: "Verification failed" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: "Verification failed. Please try again." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
