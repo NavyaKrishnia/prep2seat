@@ -1,90 +1,68 @@
-// OTP flow with automatic fallback.
-// PRIMARY: calls send-otp / verify-otp Edge Functions (secure, Twilio SMS)
-// FALLBACK: if Edge Functions are not deployed yet, stores plaintext OTP in
-//           phone_otps table and shows it in the UI for dev/testing.
-//           Switch FORCE_FALLBACK to false once Edge Functions are live.
+// OTP Authentication Flow
+//
+// PRIMARY (production): send-otp Edge Function generates code, stores hash
+//   in phone_otps via service_role, sends via Twilio SMS. verify-otp checks hash.
+//
+// FALLBACK (when Edge Functions not deployed / Twilio not configured):
+//   OTP generated in browser memory only — no DB write needed.
+//   Code shown in UI. verifyOtpAndSignIn checks against in-memory store.
+//   Uses Supabase anonymous sign-in for session.
 
 import { supabase } from "@/integrations/supabase/client";
 
-// ─── Toggle this to false once Twilio Edge Functions are confirmed working ───
-const FORCE_FALLBACK = true; // set to false once Twilio SMS is confirmed working
-// ─────────────────────────────────────────────────────────────────────────────
+// In-memory OTP store — survives only for current browser session
+// Map<canonicalPhone, { code, expiresAt }>
+const memoryOtpStore = new Map<string, { code: string; expiresAt: number }>();
 
-function normalizePhone(phone: string) {
+function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 10) return `+91${digits}`;
   if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
   return `+91${digits}`;
 }
 
-// ── Fallback: store plaintext OTP in DB, return code so UI can display it ──
+// ── Fallback: browser memory OTP, no DB required ────────────────────────────
+
 async function sendOtpFallback(phone: string): Promise<string> {
   const canonical = normalizePhone(phone);
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  // Store plaintext in code_hash column temporarily (fallback only)
-  const { error } = await supabase.from("phone_otps").insert({
-    phone: canonical,
-    code_hash: `PLAIN:${code}`, // prefix so we know it's plaintext
-    expires_at: expiresAt,
-    attempts: 0,
-  });
-
-  if (error) {
-    console.error("phone_otps insert error:", error);
-    throw new Error(`DB error: ${error.message}`);
-  }
-
-  return code; // returned so UI can display it
+  memoryOtpStore.set(canonical, { code, expiresAt });
+  console.info("[OTP fallback] Code generated for", canonical);
+  return code;
 }
 
 async function verifyOtpFallback(phone: string, code: string): Promise<void> {
   const canonical = normalizePhone(phone);
+  const entry = memoryOtpStore.get(canonical);
 
-  const { data: row, error: selErr } = await supabase
-    .from("phone_otps")
-    .select("*")
-    .eq("phone", canonical)
-    .is("consumed_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (selErr) throw new Error(`DB error: ${selErr.message}`);
-  if (!row) throw new Error("No active OTP found. Please request a new code.");
-  if (new Date(row.expires_at).getTime() < Date.now()) {
+  if (!entry) {
+    throw new Error("No active OTP found. Please request a new code.");
+  }
+  if (Date.now() > entry.expiresAt) {
+    memoryOtpStore.delete(canonical);
     throw new Error("OTP has expired. Please request a new code.");
   }
-
-  const storedCode = row.code_hash.replace("PLAIN:", "");
-  if (storedCode !== code) {
-    // increment attempts
-    await supabase
-      .from("phone_otps")
-      .update({ attempts: (row.attempts ?? 0) + 1 })
-      .eq("id", row.id);
+  if (entry.code !== code) {
     throw new Error("Incorrect OTP. Please try again.");
   }
 
-  // Mark consumed
-  await supabase
-    .from("phone_otps")
-    .update({ consumed_at: new Date().toISOString() })
-    .eq("id", row.id);
+  // OTP matched — consume it
+  memoryOtpStore.delete(canonical);
 
-  // Sign in anonymously and store phone in session metadata
-  // This gives a real Supabase session without needing magic links
+  // Create a real Supabase session via anonymous sign-in
   const { error: signInErr } = await supabase.auth.signInAnonymously();
   if (signInErr) throw signInErr;
 
-  // Update user metadata with phone
+  // Tag the session with their phone number
   await supabase.auth.updateUser({
     data: { whatsapp_number: canonical, phone_verified: true },
   });
 }
 
-// ── Primary: call Edge Functions ────────────────────────────────────────────
+// ── Primary: Edge Function path ─────────────────────────────────────────────
+
 async function sendOtpEdgeFunction(phone: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke("send-otp", {
     body: { phone },
@@ -101,7 +79,6 @@ async function verifyOtpEdgeFunction(phone: string, code: string): Promise<void>
   if (!data || data.success !== true) {
     throw new Error(data?.error || "Verification failed");
   }
-
   const { email, token_hash } = data as { email: string; token_hash: string };
   const { error: verifyErr } = await supabase.auth.verifyOtp({
     type: "email",
@@ -111,55 +88,64 @@ async function verifyOtpEdgeFunction(phone: string, code: string): Promise<void>
   if (verifyErr) throw verifyErr;
 }
 
+function isDeploymentError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("non-2xx") ||
+    msg.includes("Failed to fetch") ||
+    msg.includes("not found") ||
+    msg.includes("503") ||
+    msg.includes("not configured") ||
+    msg.includes("FunctionsFetchError")
+  );
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Send OTP. Returns the plaintext code ONLY in fallback mode (for display).
- * In production Edge Function mode, returns undefined (code goes via SMS).
+ * Send OTP.
+ * Returns the plaintext code ONLY in fallback mode (shown in UI).
+ * In production (Twilio working), returns undefined — code goes via SMS.
  */
 export async function sendOtp(phone: string): Promise<string | undefined> {
-  if (FORCE_FALLBACK) {
-    return sendOtpFallback(phone);
-  }
   try {
     await sendOtpEdgeFunction(phone);
+    // Edge function succeeded — real SMS sent, no code to return
     return undefined;
   } catch (err) {
-    // If Edge Function not deployed (FunctionsFetchError / non-2xx), fall back
-    const msg = err instanceof Error ? err.message : String(err);
-    const isMissing =
-      msg.includes("non-2xx") ||
-      msg.includes("Failed to fetch") ||
-      msg.includes("not found") ||
-      msg.includes("503") ||
-      msg.includes("not configured");
-
-    if (isMissing) {
-      console.warn("Edge Function unavailable, using fallback OTP flow");
+    if (isDeploymentError(err)) {
+      console.warn("[OTP] Edge Function unavailable, using in-memory fallback");
       return sendOtpFallback(phone);
     }
     throw err;
   }
 }
 
-export async function verifyOtpAndSignIn(phone: string, code: string): Promise<void> {
-  if (FORCE_FALLBACK) {
+/**
+ * Verify OTP and sign user in.
+ * Automatically uses same path as sendOtp did for this phone.
+ */
+export async function verifyOtpAndSignIn(
+  phone: string,
+  code: string,
+): Promise<void> {
+  const canonical = normalizePhone(phone);
+
+  // If there's an in-memory entry for this phone, use fallback path
+  if (memoryOtpStore.has(canonical)) {
     return verifyOtpFallback(phone, code);
   }
+
+  // Otherwise try Edge Function path
   try {
     await verifyOtpEdgeFunction(phone, code);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const isMissing =
-      msg.includes("non-2xx") ||
-      msg.includes("Failed to fetch") ||
-      msg.includes("not found") ||
-      msg.includes("503") ||
-      msg.includes("not configured");
-
-    if (isMissing) {
-      console.warn("Edge Function unavailable, using fallback OTP verify");
-      return verifyOtpFallback(phone, code);
+    if (isDeploymentError(err)) {
+      console.warn("[OTP] Edge Function unavailable for verify");
+      // No in-memory entry found either — user needs to resend
+      throw new Error(
+        "Session expired. Please click 'Resend OTP' to get a new code.",
+      );
     }
     throw err;
   }
