@@ -48,6 +48,7 @@ export const PhoneOtpForm = forwardRef<
   const [resendIn, setResendIn] = useState(0);
   const [verifying, setVerifying] = useState(false);
   const [sending, setSending] = useState(false);
+  const [fallbackCode, setFallbackCode] = useState<string | undefined>(undefined);
   const otpRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,7 +86,8 @@ export const PhoneOtpForm = forwardRef<
     }
     setSending(true);
     try {
-      await sendOtp(phone);
+      const code = await sendOtp(phone);
+      setFallbackCode(code); // defined only in fallback mode (no SMS)
       setOtpSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send OTP");
@@ -121,7 +123,8 @@ export const PhoneOtpForm = forwardRef<
     setError("");
     setSending(true);
     try {
-      await sendOtp(phone);
+      const code = await sendOtp(phone);
+      setFallbackCode(code);
       setResendIn(15);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not resend");
@@ -293,6 +296,16 @@ export const PhoneOtpForm = forwardRef<
             })}
           </div>
         </div>
+        {/* Fallback mode: SMS not configured, show OTP in UI for testing */}
+        {fallbackCode && (
+          <div className="mt-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-center">
+            <p className="text-xs font-medium text-foreground/60 mb-1">
+              📋 SMS not configured — your OTP is:
+            </p>
+            <p className="text-2xl font-bold tracking-widest text-navy">{fallbackCode}</p>
+            <p className="text-xs text-foreground/50 mt-1">Enter this code above to continue</p>
+          </div>
+        )}
         {error && <p className="mt-3 text-sm text-destructive text-center">{error}</p>}
         {busy && (
           <p className="mt-3 text-sm text-foreground/60 text-center">Verifying…</p>
