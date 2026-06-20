@@ -1,4 +1,13 @@
 project_id = "zyajssdzeruymlzxwjid"
 
+# send-whatsapp requires a logged-in caller; JWT verification protects it from
+# unauthenticated abuse of the Interakt quota.
 [functions.send-whatsapp]
+verify_jwt = true
+
+# OTP endpoints must be callable before any session exists.
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
 verify_jwt = false
