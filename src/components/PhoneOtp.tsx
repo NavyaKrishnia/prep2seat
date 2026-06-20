@@ -35,7 +35,7 @@ export function PhoneOtpForm({
 
   useEffect(() => {
     if (!otpSent) return;
-    setResendIn(30);
+    setResendIn(15);
     const id = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
     setTimeout(() => otpRef.current?.focus(), 250);
     return () => clearInterval(id);
@@ -55,7 +55,7 @@ export function PhoneOtpForm({
   }
 
   async function tryVerify(code: string) {
-    if (code.length !== 4) return;
+    if (code.length !== 6) return;
     if (verifying || loadingExternal) return;
     setVerifying(true);
     setError("");
@@ -68,16 +68,16 @@ export function PhoneOtpForm({
   }
 
   function onOtpChange(v: string) {
-    const digits = v.replace(/\D/g, "").slice(0, 4);
+    const digits = v.replace(/\D/g, "").slice(0, 6);
     setOtp(digits);
-    if (digits.length === 4) tryVerify(digits);
+    if (digits.length === 6) tryVerify(digits);
   }
 
   function handleResend() {
     if (resendIn > 0) return;
     setOtp("");
     setError("");
-    setResendIn(30);
+    setResendIn(15);
   }
 
   function changeNumber() {
@@ -205,7 +205,7 @@ export function PhoneOtpForm({
     <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
       <div>
         <label className="block text-sm font-medium text-foreground mb-1.5">
-          Enter the 4-digit OTP
+          Enter the 6-digit OTP
         </label>
         <p className="text-xs text-foreground/60 mb-3">
           Sent to <span className="font-semibold text-navy">+91 {maskPhone(phone)}</span>
@@ -216,7 +216,7 @@ export function PhoneOtpForm({
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={4}
+            maxLength={6}
             value={otp}
             onChange={(e) => onOtpChange(e.target.value)}
             disabled={busy}
@@ -224,7 +224,7 @@ export function PhoneOtpForm({
             aria-label="OTP"
           />
           <div className="flex justify-center gap-3 pointer-events-none">
-            {[0, 1, 2, 3].map((i) => {
+            {[0, 1, 2, 3, 4, 5].map((i) => {
               const active = otp.length === i && !busy;
               return (
                 <div
