@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, MessageCircle } from "lucide-react";
 import { useModals } from "@/lib/modals";
+
+const WA_NUMBER = "916378489833";
+const waPersonalisedLink = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Hi, I'm interested in getting a personalised NEET college preference list.\n\nMy details:\nName: \nNEET Rank: \nCategory: \nState: ")}`;
 
 const links = [
   { href: "#home", label: "Home" },
@@ -38,10 +41,7 @@ export function Navbar() {
         <ul className="hidden md:flex items-center gap-7">
           {links.map((l) => (
             <li key={l.href}>
-              <a
-                href={l.href}
-                className="text-sm font-medium text-foreground/80 hover:text-navy transition-colors"
-              >
+              <a href={l.href} className="text-sm font-medium text-foreground/80 hover:text-navy transition-colors">
                 {l.label}
               </a>
             </li>
@@ -56,29 +56,29 @@ export function Navbar() {
           >
             Get Started Free
           </button>
-          <button
-            type="button"
-            onClick={() => modals.openPurchase()}
-            className="btn-gold inline-flex items-center justify-center rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold"
+          <a
+            href={waPersonalisedLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-gold inline-flex items-center justify-center gap-1.5 rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-gold-foreground shadow-gold hover:brightness-110 transition"
           >
+            <MessageCircle size={14} />
             Get Personalised List →
-          </button>
+          </a>
         </div>
 
-        {/* Mobile: primary CTA only + menu */}
+        {/* Mobile */}
         <div className="md:hidden flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => modals.openPurchase()}
-            className="btn-gold inline-flex items-center justify-center rounded-full bg-gold px-3.5 py-2 text-xs font-bold text-gold-foreground shadow-gold"
+          <a
+            href={waPersonalisedLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-gold inline-flex items-center justify-center gap-1 rounded-full bg-gold px-3.5 py-2 text-xs font-bold text-gold-foreground shadow-gold"
           >
+            <MessageCircle size={12} />
             Get Personalised List →
-          </button>
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setOpen((v) => !v)}
-            className="p-2 -mr-2 text-navy"
-          >
+          </a>
+          <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)} className="p-2 -mr-2 text-navy">
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -89,11 +89,7 @@ export function Navbar() {
           <ul className="px-5 py-4 flex flex-col gap-1">
             {links.map((l) => (
               <li key={l.href}>
-                <a
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className="block py-3 text-base font-medium text-foreground/90 hover:text-navy"
-                >
+                <a href={l.href} onClick={() => setOpen(false)} className="block py-3 text-base font-medium text-foreground/90 hover:text-navy">
                   {l.label}
                 </a>
               </li>
@@ -101,10 +97,7 @@ export function Navbar() {
             <li className="pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  setOpen(false);
-                  modals.openFreeForm();
-                }}
+                onClick={() => { setOpen(false); modals.openFreeForm(); }}
                 className="block w-full text-center rounded-full border-2 border-navy px-5 py-3 font-bold text-navy"
               >
                 Get Started Free

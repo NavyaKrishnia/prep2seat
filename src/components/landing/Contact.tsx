@@ -1,4 +1,9 @@
-import { Mail, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+
+// Email button and address kept in code for future SaaS use, not rendered.
+// const EMAIL = "hello@prep2seat.com";
+
+const waContactLink = `https://wa.me/916378489833?text=${encodeURIComponent("Hi, I have a question about Prep2Seat's NEET counselling plans.")}`;
 
 export function Contact() {
   return (
@@ -11,36 +16,21 @@ export function Contact() {
           Reach out — we usually reply faster than you'd expect.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="mt-10 flex justify-center">
           <a
-            href="https://wa.me/916378489833"
+            href={waContactLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-whatsapp px-7 py-4 text-base font-bold text-white hover:brightness-105 active:scale-[0.98] transition shadow-card"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-8 py-4 text-base font-bold text-white hover:brightness-105 active:scale-[0.98] transition shadow-card"
           >
             <MessageCircle size={20} />
             Chat on WhatsApp
           </a>
-          <a
-            href="mailto:hello@prep2seat.com"
-            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-navy px-7 py-4 text-base font-bold text-navy hover:bg-navy hover:text-navy-foreground transition"
-          >
-            <Mail size={20} />
-            Send us an Email
-          </a>
         </div>
 
-        <div className="mt-10 inline-flex flex-col items-center gap-2">
-          <a
-            href="mailto:hello@prep2seat.com"
-            className="text-lg font-semibold text-navy hover:text-gold transition"
-          >
-            hello@prep2seat.com
-          </a>
-          <p className="text-sm text-foreground/60">
-            We typically respond within a few hours.
-          </p>
-        </div>
+        <p className="mt-6 text-sm text-foreground/50">
+          We typically respond within a few hours.
+        </p>
       </div>
     </section>
   );

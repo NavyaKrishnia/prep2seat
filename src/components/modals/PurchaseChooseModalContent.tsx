@@ -1,10 +1,15 @@
-import { Check } from "lucide-react";
-import { useModals } from "@/lib/modals";
-import { useAuthSession } from "@/lib/session";
+import { Check, MessageCircle } from "lucide-react";
 import { downloadSampleExcel, type LeadCtx } from "@/lib/sample-download";
+import { useAuthSession } from "@/lib/session";
 import { toast } from "sonner";
 
-const SUPPORT_WHATSAPP = "https://wa.me/916378489833";
+const WA_NUMBER = "916378489833";
+const SUPPORT_WA = `https://wa.me/${WA_NUMBER}`;
+
+function buildWaLink(planName: string) {
+  const msg = `Hi, I want to enrol in the *${planName} Plan* for NEET counselling.\n\nMy details:\nName: \nNEET Rank: \nCategory: \nState: `;
+  return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
   return (
@@ -14,19 +19,46 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
   );
 }
 
-const BASIC_FEATURES = [
-  "Personalised preference list (Round 1)",
-  "Expert-reviewed for your rank",
-  "Excel download, ready in 24 hours",
-  "Community counselling session (Round 1)",
-];
-
-const PRO_FEATURES = [
-  "Everything in Basic",
-  "Lists for every counselling round",
-  "Community sessions for all rounds",
-  "1-on-1 mentorship session",
-  "Priority WhatsApp support",
+const allPlans = [
+  {
+    key: "basic",
+    name: "Basic",
+    price: "₹999",
+    highlight: false,
+    features: [
+      "Personalised preference list (Round 1)",
+      "Expert-reviewed for your rank",
+      "Excel download, ready in 24 hours",
+      "Community counselling session (Round 1)",
+    ],
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    price: "₹2999",
+    badge: "Most Popular",
+    highlight: true,
+    features: [
+      "Everything in Basic",
+      "Lists for every counselling round",
+      "Community sessions for all rounds",
+      "1-on-1 mentorship session",
+      "Priority WhatsApp support",
+    ],
+  },
+  {
+    key: "elite",
+    name: "Elite",
+    price: "₹4999",
+    highlight: false,
+    features: [
+      "Everything in Pro",
+      "We handle the entire counselling process",
+      "We fill preferences on official portal",
+      "Dedicated counsellor on call",
+      "You just sit back and wait for your seat",
+    ],
+  },
 ];
 
 export function PurchaseChooseModalContent({
@@ -38,7 +70,6 @@ export function PurchaseChooseModalContent({
   sampleAvailable: boolean;
   ctx: LeadCtx | null;
 }) {
-  const modals = useModals();
   const session = useAuthSession();
 
   async function handleSampleDownload() {
@@ -47,88 +78,86 @@ export function PurchaseChooseModalContent({
       await downloadSampleExcel(ctx, session.whatsappNumber);
       toast.success("Downloading your sample list...");
       onClose();
-    } catch (e) {
-      console.error(e);
-      toast.error("Couldn't download right now. Try again.");
+    } catch {
+      toast.error("Download failed. Please try again.");
     }
   }
 
   return (
-    <div>
-      <h2 className="text-2xl sm:text-3xl font-bold text-navy text-center">
-        Choose Your Plan
-      </h2>
-      <p className="mt-2 text-sm text-foreground/70 text-center">
-        Expert-built within 24 hours · One-time payment · No subscription
-      </p>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-navy">Choose Your Plan</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Expert-built within 24 hours · One-time payment · No subscription
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {allPlans.map((p) => (
+          <div
+            key={p.key}
+            className={`relative rounded-xl flex flex-col pt-8 pb-6 px-5 border ${
+              p.highlight
+                ? "bg-navy text-navy-foreground border-gold"
+                : "bg-card border-border"
+            }`}
+          >
+            {p.badge && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gold text-gold-foreground text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                {p.badge}
+              </span>
+            )}
+
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${p.highlight ? "text-gold" : "text-foreground/50"}`}>
+              {p.name}
+            </h3>
+            <p className={`mt-2 text-3xl font-bold ${p.highlight ? "text-gold" : "text-navy"}`}>
+              {p.price}
+            </p>
+
+            <ul className="mt-4 space-y-2 flex-1">
+              {p.features.map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <Check size={14} className="mt-0.5 flex-shrink-0 text-gold" strokeWidth={2.5} />
+                  <span className={`text-xs leading-relaxed ${p.highlight ? "text-navy-foreground/80" : "text-foreground/70"}`}>
+                    {f}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <a
+              href={buildWaLink(p.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 w-full inline-flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-bold bg-gold text-gold-foreground hover:brightness-110 hover:scale-[1.03] active:scale-[0.98] transition-all shadow-gold"
+            >
+              <MessageCircle size={13} />
+              Enrol via WhatsApp
+            </a>
+          </div>
+        ))}
+      </div>
 
       {sampleAvailable && ctx && (
-        <div className="mt-5 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-center text-sm text-foreground/70">
-          Your sample list download is also ready — or get your complete personalised list below.
+        <p className="text-center text-xs text-foreground/50">
           <button
             type="button"
             onClick={handleSampleDownload}
-            className="ml-2 text-navy font-semibold hover:underline"
+            className="underline hover:text-navy transition-colors"
           >
-            Just download the sample →
+            Just download the sample list instead →
           </button>
-        </div>
+        </p>
       )}
 
-      <div className="mt-6 grid sm:grid-cols-2 gap-4">
-        {/* Basic */}
-        <div className="relative rounded-xl border-2 border-gold bg-card p-5 flex flex-col">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-navy">Basic</h3>
-          <p className="mt-2 text-4xl font-bold text-gold">₹999</p>
-          <ul className="mt-4 space-y-2 flex-1">
-            {BASIC_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-sm">
-                <Check className="text-gold mt-0.5 shrink-0" size={16} strokeWidth={3} />
-                <span className="text-foreground/85">{f}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => modals.openPurchasePayment("basic")}
-            className="mt-5 w-full rounded-full bg-gold py-3 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
-          >
-            Get Basic — ₹999
-          </button>
-        </div>
-
-        {/* Pro */}
-        <div className="relative rounded-xl border-2 border-gold bg-navy text-navy-foreground p-5 flex flex-col">
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-gold-foreground text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-            Most Popular
-          </span>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-gold">Pro</h3>
-          <p className="mt-2 text-4xl font-bold text-gold">₹2999</p>
-          <ul className="mt-4 space-y-2 flex-1">
-            {PRO_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-sm">
-                <Check className="text-gold mt-0.5 shrink-0" size={16} strokeWidth={3} />
-                <span className="text-navy-foreground/90">{f}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => modals.openPurchasePayment("pro")}
-            className="mt-5 w-full rounded-full bg-gold py-3 font-bold text-gold-foreground shadow-gold hover:brightness-105 active:scale-[0.98] transition"
-          >
-            Go Pro — ₹2999
-          </button>
-        </div>
-      </div>
-
       <a
-        href={SUPPORT_WHATSAPP}
+        href={SUPPORT_WA}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground/80 hover:border-[#25D366] hover:text-navy transition"
+        className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold text-white hover:brightness-105 active:scale-[0.98] transition shadow-card"
       >
-        <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+        <WhatsAppIcon className="h-4 w-4 text-white" />
         Have questions? Chat with us on WhatsApp
       </a>
     </div>
