@@ -42,13 +42,13 @@ export function Hero() {
               Get Personalised List
             </a>
             {/* Free list — keeps existing modal flow */}
-            <button
+            {/* <button
               type="button"
               onClick={() => modals.openFreeForm()}
               className="order-2 sm:order-1 inline-flex items-center justify-center rounded-full border-2 border-gold px-7 py-4 text-base font-bold text-navy hover:bg-gold hover:text-gold-foreground transition"
             >
               Get Your Free List
-            </button>
+            </button> */}
             <a
               href="#how-it-works"
               className="order-3 inline-flex items-center justify-center gap-1.5 px-3 py-4 text-base font-semibold text-navy hover:text-gold transition"
