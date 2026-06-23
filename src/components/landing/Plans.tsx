@@ -205,7 +205,7 @@ export function Plans() {
                 href={buildWaLink(p.name, quota, course, collegeType)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full py-3.5 font-bold text-sm bg-gold text-gold-foreground transition-all duration-200 hover:brightness-110 hover:scale-[1.04] active:scale-[0.98] shadow-gold"
+                className="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full py-3.5 font-bold text-sm bg-gold text-gold-foreground shadow-gold transition-all duration-200 hover:bg-navy hover:text-white hover:shadow-md hover:scale-[1.04] active:scale-[0.97]"
               >
                 <MessageCircle size={16} />
                 {p.cta}
