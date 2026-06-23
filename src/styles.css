@@ -118,3 +118,48 @@
     @apply scale-[1.04] brightness-110;
   }
 }
+
+/* ── Animation utilities ───────────────────────────────────────── */
+@layer utilities {
+  /* Slow pulse for hero background motif */
+  .animate-pulse-slow {
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  /* Stagger children fade-up — apply to parent, children use nth-child delay */
+  .stagger-children > * {
+    animation: fadeSlideUp 0.6s ease-out both;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 360ms; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* TanStack animate-in helpers (slide-in-from-*) */
+@layer utilities {
+  .animate-in {
+    animation-fill-mode: both;
+    animation-duration: 0.5s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fade-in        { animation-name: fadeIn; }
+  .slide-in-from-bottom-3 { animation-name: slideFromBottom3; }
+  .slide-in-from-bottom-4 { animation-name: slideFromBottom4; }
+  .slide-in-from-top-2    { animation-name: slideFromTop2; }
+  .duration-500   { animation-duration: 0.5s; }
+  .duration-600   { animation-duration: 0.6s; }
+  .duration-700   { animation-duration: 0.7s; }
+}
+@keyframes fadeIn            { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideFromBottom3  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideFromBottom4  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideFromTop2     { from { opacity: 0; transform: translateY(-8px);  } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Hover: nav links underline ────────────────────────────────── */
+/* Already handled inline via Tailwind after: pseudo-classes in Navbar */
